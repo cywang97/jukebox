@@ -347,7 +347,8 @@ DEFAULTS["script"] = Hyperparams(
 )
 
 DEFAULTS["data"] = Hyperparams(
-    audio_files_dir='',
+        train_data='',
+        val_data='',
     finetune='',
     english_only=False,
     bs=1,

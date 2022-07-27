@@ -8,8 +8,9 @@ from jukebox.utils.io import get_duration_sec, load_audio
 from jukebox.data.labels import Labeller
 
 class FilesAudioDataset(Dataset):
-    def __init__(self, hps):
+    def __init__(self, hps, data_file):
         super().__init__()
+        self.data_file = data_file
         self.sr = hps.sr
         self.channels = hps.channels
         self.min_duration = hps.min_duration or math.ceil(hps.sample_length / hps.sr)
@@ -37,10 +38,21 @@ class FilesAudioDataset(Dataset):
 
     def init_dataset(self, hps):
         # Load list of files and starts/durations
-        files = librosa.util.find_files(f'{hps.audio_files_dir}', ['mp3', 'opus', 'm4a', 'aac', 'wav'])
-        print_all(f"Found {len(files)} files. Getting durations")
+        f = open(f'{self.data_file}')  
+        root = f.readline().strip()
+        files = []
+        durations = []
+        for line in f:
+            line = line.strip().split()
+            files.append(root+'/'+line[0])
+            durations.append(int(line[1])/44100 * self.sr)
+        f.close()
+        durations = np.array(durations)
+
+        #files = librosa.util.find_files(f'{hps.audio_files_dir}', ['mp3', 'opus', 'm4a', 'aac', 'wav'])
+        #print_all(f"Found {len(files)} files. Getting durations")
         cache = dist.get_rank() % 8 == 0 if dist.is_available() else True
-        durations = np.array([get_duration_sec(file, cache=cache) * self.sr for file in files])  # Could be approximate
+        #durations = np.array([get_duration_sec(file, cache=cache) * self.sr for file in files])  # Could be approximate
         self.filter(files, durations)
 
         if self.labels:

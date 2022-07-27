@@ -23,10 +23,10 @@ class OffsetDataset(Dataset):
 
 class DataProcessor():
     def __init__(self, hps):
-        self.dataset = FilesAudioDataset(hps)
+        self.train_dataset = FilesAudioDataset(hps, hps.train_data)
         duration = 1 if hps.prior else 600
-        hps.bandwidth = calculate_bandwidth(self.dataset, hps, duration=duration)
-        self.create_datasets(hps)
+        hps.bandwidth = calculate_bandwidth(self.train_dataset, hps, duration=duration)
+        self.test_dataset = FilesAudioDataset(hps, hps.val_data)
         self.create_samplers(hps)
         self.create_data_loaders(hps)
         self.print_stats(hps)

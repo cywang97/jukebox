@@ -1,0 +1,1 @@
+mpiexec -n 4 python jukebox/train.py --hps=vqvae --name=vqvae --sample_length=220544 --bs=2 --train_data=/datablob/users/v-chengw/data/AudioSet/data/train.tsv --val_data=/datablob/users/v-chengw/data/AudioSet/data/valid.tsv --labels=False --train --test --aug_shift --aug_blend --min_duration=10 --local_logdir='/modelblob/users/v-chengw/jukebox_model'

@@ -2,6 +2,7 @@ import os
 from time import sleep
 import torch
 import jukebox.utils.dist_adapter as dist
+#import torch.distributed as dist
 
 def print_once(msg):
     if (not dist.is_available()) or dist.get_rank()==0:
@@ -57,21 +58,29 @@ def setup_dist_from_mpi(
         return mpi_rank, local_rank, device
 
 def _setup_dist_from_mpi(master_addr, backend, port, n_attempts, verbose):
-    from mpi4py import MPI  # This must be imported in order to get e   rrors from all ranks to show up
+    #from mpi4py import MPI  # This must be imported in order to get e   rrors from all ranks to show up
 
     #mpi_rank = MPI.COMM_WORLD.Get_rank()
     #mpi_size = MPI.COMM_WORLD.Get_size()
     mpi_rank = int(os.environ['OMPI_COMM_WORLD_RANK'])
     mpi_size = int(os.environ["OMPI_COMM_WORLD_SIZE"])
+    if 'MASTER_ADDR' in os.environ:
+        master_addr = os.environ['MASTER_ADDR']
+    else:
+        master_addr = 'localhost'
+    if 'MASTER_PORT' in os.environ:
+        master_port = os.environ["MASTER_PORT"]
+    else:
+        master_port = 6008
 
 
     os.environ["RANK"] = str(mpi_rank)
     os.environ["WORLD_SIZE"] = str(mpi_size)
     os.environ["MASTER_ADDR"] = master_addr
     os.environ["MASTER_PORT"] = str(port)
-    os.environ["NCCL_LL_THRESHOLD"] = "0"
-    os.environ["NCCL_NSOCKS_PERTHREAD"] = "2"
-    os.environ["NCCL_SOCKET_NTHREADS"] = "8"
+    #os.environ["NCCL_LL_THRESHOLD"] = "0"
+    #os.environ["NCCL_NSOCKS_PERTHREAD"] = "2"
+    #os.environ["NCCL_SOCKET_NTHREADS"] = "8"
 
     # Pin this rank to a specific GPU on the node
     local_rank = mpi_rank % 8
@@ -85,7 +94,11 @@ def _setup_dist_from_mpi(master_addr, backend, port, n_attempts, verbose):
     # We guard against the failure and then retry
     for attempt_idx in range(n_attempts):
         try:
-            dist.init_process_group(backend=backend, init_method=f"env://")
+            torch.distributed.init_process_group(
+                    backend=backend, 
+                    init_method="tcp://%s:%s" % (master_addr, master_port), 
+                    world_size=mpi_size, 
+                    rank=mpi_rank)
             assert dist.get_rank() == mpi_rank
 
             use_cuda = torch.cuda.is_available()

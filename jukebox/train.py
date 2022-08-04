@@ -159,7 +159,7 @@ def evaluate(model, orig_model, logger, metrics, data_processor, hps):
         _print_keys = dict(l="loss", rl="recons_loss", sl="spectral_loss")
 
     with t.no_grad():
-        for i, x in logger.get_range(data_processor.test_loader):
+        for i, x in data_processor.test_loader:
             if isinstance(x, (tuple, list)):
                 x, y = x
             else:
@@ -192,12 +192,14 @@ def evaluate(model, orig_model, logger, metrics, data_processor, hps):
                 if log_input_output:
                     log_inputs(orig_model, logger, x_in, y, x_out, hps)
 
-            logger.set_postfix(**{print_key:_metrics[key] for print_key, key in _print_keys.items()})
-
+            #logger.set_postfix(**{print_key:_metrics[key] for print_key, key in _print_keys.items()})
+        msg = " ".join(["{}:{:.2f}".format(print_key, _metrics[key]) for print_key, key in _print_keys.items()])
+        print(f"eval: \t"+msg)
+        
     for key, val in _metrics.items():
         logger.add_scalar(f"test_{key}", metrics.avg(f"test_{key}"))
 
-    logger.close_range()
+    #logger.close_range()
     return {key: metrics.avg(f"test_{key}") for key in _metrics.keys()}
 
 def train(model, orig_model, opt, shd, scalar, ema, logger, metrics, data_processor, hps):
@@ -208,7 +210,7 @@ def train(model, orig_model, opt, shd, scalar, ema, logger, metrics, data_proces
     else:
         _print_keys = dict(l="loss", sl="spectral_loss", rl="recons_loss", e="entropy", u="usage", uc="used_curr", gn="gn", pn="pn", dk="dk")
 
-    for i, x in logger.get_range(data_processor.train_loader):
+    for x in data_processor.train_loader:
         if isinstance(x, (tuple, list)):
             x, y = x
         else:
@@ -268,7 +270,7 @@ def train(model, orig_model, opt, shd, scalar, ema, logger, metrics, data_proces
                 if ema is not None: ema.swap()
                 orig_model.eval()
                 name = 'latest' if hps.prior else f'step_{logger.iters}'
-                if dist.get_rank() % 8 == 0:
+                if dist.get_rank() == 0:
                     save_checkpoint(logger, name, orig_model, opt, dict(step=logger.iters), hps)
                 orig_model.train()
                 if ema is not None: ema.swap()
@@ -284,11 +286,15 @@ def train(model, orig_model, opt, shd, scalar, ema, logger, metrics, data_proces
             if log_input_output:
                 log_inputs(orig_model, logger, x_in, y, x_out, hps)
 
-        logger.set_postfix(**{print_key:_metrics[key] for print_key, key in _print_keys.items()})
+        #logger.set_postfix(**{print_key:_metrics[key] for print_key, key in _print_keys.items()})
+        if logger.iters % 100 == 0 and dist.get_rank() == 0:
+            msg = " ".join(["{}:{:.2f}".format(print_key, _metrics[key]) for print_key, key in _print_keys.items()])
+            print(f"iter: {logger.iters}\t"+msg)
+            
         if finished_training:
             dist.barrier()
             exit()
-    logger.close_range()
+    #logger.close_range()
     return {key: metrics.avg(key) for key in _metrics.keys()}
 
 def run(hps="teeny", port=29500, **kwargs):
@@ -297,7 +303,7 @@ def run(hps="teeny", port=29500, **kwargs):
     hps = setup_hparams(hps, kwargs)
     hps.ngpus = dist.get_world_size()
     hps.argv = " ".join(sys.argv)
-    hps.bs_sample = hps.nworkers = hps.bs
+    hps.bs_sample = hps.bs
 
     # Setup dataset
     data_processor = DataProcessor(hps)

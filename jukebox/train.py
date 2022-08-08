@@ -157,9 +157,10 @@ def evaluate(model, orig_model, logger, metrics, data_processor, hps):
         _print_keys = dict(l="loss", bpd="bpd")
     else:
         _print_keys = dict(l="loss", rl="recons_loss", sl="spectral_loss")
+    step = 0
 
     with t.no_grad():
-        for i, x in data_processor.test_loader:
+        for x in data_processor.test_loader:
             if isinstance(x, (tuple, list)):
                 x, y = x
             else:
@@ -170,7 +171,8 @@ def evaluate(model, orig_model, logger, metrics, data_processor, hps):
                 y = y.to('cuda', non_blocking=True)
 
             x_in = x = audio_preprocess(x, hps)
-            log_input_output = (i==0)
+            log_input_output = (step==0)
+            step += 1
 
             if hps.prior:
                 forw_kwargs = dict(y=y, fp16=hps.fp16, decode=log_input_output)

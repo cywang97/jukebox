@@ -78,9 +78,9 @@ def _setup_dist_from_mpi(master_addr, backend, port, n_attempts, verbose):
     os.environ["WORLD_SIZE"] = str(mpi_size)
     os.environ["MASTER_ADDR"] = master_addr
     os.environ["MASTER_PORT"] = str(port)
-    #os.environ["NCCL_LL_THRESHOLD"] = "0"
-    #os.environ["NCCL_NSOCKS_PERTHREAD"] = "2"
-    #os.environ["NCCL_SOCKET_NTHREADS"] = "8"
+    os.environ["NCCL_LL_THRESHOLD"] = "0"
+    os.environ["NCCL_NSOCKS_PERTHREAD"] = "2"
+    os.environ["NCCL_SOCKET_NTHREADS"] = "8"
 
     # Pin this rank to a specific GPU on the node
     local_rank = mpi_rank % 8

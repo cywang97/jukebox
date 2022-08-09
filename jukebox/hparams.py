@@ -216,6 +216,8 @@ small_prior = Hyperparams(
     attn_order=2,
     blocks=64,
     init_scale=0.7,
+    min_length=0,
+    max_length=4000
 )
 HPARAMS_REGISTRY["small_prior"] = small_prior
 
@@ -362,6 +364,8 @@ DEFAULTS["data"] = Hyperparams(
     p_unk=0.1,
     min_duration=None,
     max_duration=None,
+    min_length=None,
+    max_length=None,
     n_tokens=0,
     n_vocab=0,
     use_tokens=False,

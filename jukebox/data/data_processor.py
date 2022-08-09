@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader, Dataset, BatchSampler, RandomSampler
 from jukebox.utils.dist_utils import print_all
 from jukebox.utils.audio_utils import calculate_bandwidth
 from jukebox.data.files_dataset import FilesAudioDataset
+from jukebox.data.codes_dataset import FilesTextDataset
 
 class OffsetDataset(Dataset):
     def __init__(self, dataset, start, end, test=False):
@@ -23,10 +24,14 @@ class OffsetDataset(Dataset):
 
 class DataProcessor():
     def __init__(self, hps):
-        self.train_dataset = FilesAudioDataset(hps, hps.train_data)
-        duration = 1 if hps.prior else 600
-        hps.bandwidth = calculate_bandwidth(self.train_dataset, hps, duration=duration)
-        self.test_dataset = FilesAudioDataset(hps, hps.val_data)
+        if hps.prior:
+            self.train_dataset = FilesTextDataset(hps, hps.train_data)
+            self.test_dataset = FilesTextDataset(hps, hps.val_data)
+        elif hps.prior:
+            self.train_dataset = FilesAudioDataset(hps, hps.train_data)
+            duration = 1 if hps.prior else 600
+            hps.bandwidth = calculate_bandwidth(self.train_dataset, hps, duration=duration)
+            self.test_dataset = FilesAudioDataset(hps, hps.val_data)
         self.create_samplers(hps)
         self.create_data_loaders(hps)
         self.print_stats(hps)
@@ -54,14 +59,16 @@ class DataProcessor():
             collate_fn = lambda batch: tuple(t.stack([t.from_numpy(b[i]) for b in batch], 0) for i in range(2))
         else:
             collate_fn = lambda batch: t.stack([t.from_numpy(b) for b in batch], 0)
+        train_collate_fn = self.train_dataset.collate if hasattr(self.train_dataset, 'collate') else collate_fn
+        val_collate_fn = self.test_dataset.collate if hasattr(self.test_dataset, 'collate') else collate_fn
 
         print('Creating Data Loader')
         self.train_loader = DataLoader(self.train_dataset, batch_size=hps.bs, num_workers=hps.nworkers,
                                        sampler=self.train_sampler, pin_memory=False,
-                                       drop_last=True, collate_fn=collate_fn)
+                                       drop_last=True, collate_fn=train_collate_fn)
         self.test_loader = DataLoader(self.test_dataset, batch_size=hps.bs, num_workers=hps.nworkers,
                                       sampler=self.test_sampler, pin_memory=False,
-                                      drop_last=False, collate_fn=collate_fn)
+                                      drop_last=False, collate_fn=val_collate_fn)
 
     def print_stats(self, hps):
         print_all(f"Train {len(self.train_dataset)} samples. Test {len(self.test_dataset)} samples")

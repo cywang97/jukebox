@@ -119,9 +119,11 @@ def sample_prior(orig_model, ema, logger, x_in, y, hps):
     if ema is not None: ema.swap()
     orig_model.eval()
 
-    x_in = x_in[:hps.bs_sample]
-    bs = x_in.shape[0]
-    zs_in = orig_model.encode(x_in, start_level=0, bs_chunks=bs)
+    zs_in = x_in[:hps.bs_sample]
+    bs = zs_in.shape[0]
+    import pdb
+    pdb.set_trace()
+    #zs_in = orig_model.encode(x_in, start_level=0, bs_chunks=bs)
     assert len(zs_in) == hps.levels
     x_ds = [orig_model.decode(zs_in[level:], start_level=level, bs_chunks=bs) for level in range(0, hps.levels)]
 
@@ -170,7 +172,10 @@ def evaluate(model, orig_model, logger, metrics, data_processor, hps):
             if y is not None:
                 y = y.to('cuda', non_blocking=True)
 
-            x_in = x = audio_preprocess(x, hps)
+            if hps.prior:
+                x_in = x
+            else:
+                x_in = x = audio_preprocess(x, hps)
             log_input_output = (step==0)
             step += 1
 
@@ -222,7 +227,10 @@ def train(model, orig_model, opt, shd, scalar, ema, logger, metrics, data_proces
         if y is not None:
             y = y.to('cuda', non_blocking=True)
 
-        x_in = x = audio_preprocess(x, hps)
+        if hps.prior:
+            x_in = x
+        else:
+            x_in = x = audio_preprocess(x, hps)
         log_input_output = (logger.iters % hps.save_iters == 0)
 
         if hps.prior:

@@ -50,7 +50,7 @@ class SimplePrior(nn.Module):
         self.l_bins = l_bins
 
         # Passing functions instead of the vqvae module to avoid getting params
-        self.encoder = encoder
+        #self.encoder = encoder
         self.decoder = decoder
 
         # X conditioning
@@ -345,10 +345,12 @@ class SimplePrior(nn.Module):
 
     def forward(self, x, y=None, fp16=False, decode=False, get_preds=False):
         bs = x.shape[0]
-        z, *z_conds = self.encode(x, bs_chunks=bs)
-        loss, metrics = self.z_forward(z=z, z_conds=z_conds, y=y, fp16=fp16, get_preds=get_preds)
+        import pdb
+        pdb.set_trace()
+        #z, *z_conds = self.encode(x, bs_chunks=bs)
+        loss, metrics = self.z_forward(z=x, z_conds=[], y=y, fp16=fp16, get_preds=get_preds)
         if decode:
-            x_out = self.decode([z, *z_conds])
+            x_out = self.decode([x])
         else:
             x_out = None
         return x_out, loss, metrics

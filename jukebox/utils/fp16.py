@@ -197,7 +197,7 @@ class FP16FusedAdam(Optimizer):
 
                 out_p = torch.tensor([], dtype=torch.float)
                 fused_adam_step(
-                    p.data.float(),
+                    p.data,
                     out_p,
                     exp_avg,
                     exp_avg_sq,

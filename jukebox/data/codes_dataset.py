@@ -53,7 +53,11 @@ class FilesTextDataset(Dataset):
             if lengths[i] > self.max_length:
                 continue
             keep.append(i)
-        self.offsets = self.load_label_offset(self.data_file+'.label2', keep)
+        offset_f = open(f"{self.data_file}.offset")
+        offsets = [int(line.strip()) for line in offset_f]
+        offsets = [(offsets[i], offsets[i+1]) for i in keep]
+        offset_f.close()
+        self.offsets = offsets
         cache = dist.get_rank() % 8 == 0 if dist.is_available() else True
 
         """

@@ -39,7 +39,7 @@ class FilesTextDataset(Dataset):
         for line in f:
             line = line.strip().split('\t')
             if len(line) == 2:
-                name.append(line[0])
+                name.append(root+'/'+ line[0])
                 data.append(np.array(list(map(int, line[1].split()))))
 
         f.close()
@@ -65,13 +65,15 @@ class FilesTextDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, item):
-        return self.data[item]
+        return {'name': self.names[item], 'data': self.data[item]}
 
     def collate(self, batch):
-        lengths = [len(b) for b in batch]
+        names = [b['name'] for b in batch]
+        samples = [b['data'] for b in batch]
+        lengths = [len(s) for s in samples]
         size = self.sample_length
         inputs = []
-        for b in batch:
+        for b in samples:
             if len(b) == size:
                 inputs.append(b)
             else:

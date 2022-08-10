@@ -345,8 +345,6 @@ class SimplePrior(nn.Module):
 
     def forward(self, x, y=None, fp16=False, decode=False, get_preds=False):
         bs = x.shape[0]
-        import pdb
-        pdb.set_trace()
         #z, *z_conds = self.encode(x, bs_chunks=bs)
         loss, metrics = self.z_forward(z=x, z_conds=[], y=y, fp16=fp16, get_preds=get_preds)
         if decode:

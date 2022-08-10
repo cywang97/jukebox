@@ -102,7 +102,8 @@ def get_optimizer(model, hps):
 
 def log_inputs(orig_model, logger, x_in, y, x_out, hps, tag="train"):
     print(f"Logging {tag} inputs/ouputs")
-    log_aud(logger, f'{tag}_x_in', x_in, hps)
+    if not hps.prior:
+        log_aud(logger, f'{tag}_x_in', x_in, hps)
     log_aud(logger, f'{tag}_x_out', x_out, hps)
     bs = x_in.shape[0]
     if hps.prior:
@@ -217,7 +218,7 @@ def train(model, orig_model, opt, shd, scalar, ema, logger, metrics, data_proces
     else:
         _print_keys = dict(l="loss", sl="spectral_loss", rl="recons_loss", e="entropy", u="usage", uc="used_curr", gn="gn", pn="pn", dk="dk")
 
-    for x in data_processor.train_loader:
+    for i, x in logger.get_range(data_processor.train_loader):
         if isinstance(x, (tuple, list)):
             x, y = x
         else:
@@ -286,17 +287,19 @@ def train(model, orig_model, opt, shd, scalar, ema, logger, metrics, data_proces
                 if ema is not None: ema.swap()
 
         # Sample
+        """
         with t.no_grad():
             if (logger.iters % 12000) in list(range(1, 1 + hps.iters_before_update)) or finished_training:
                 if hps.prior:
                     sample_prior(orig_model, ema, logger, x_in, y, hps)
+        """
 
         # Input/Output
         with t.no_grad():
             if log_input_output:
                 log_inputs(orig_model, logger, x_in, y, x_out, hps)
 
-        #logger.set_postfix(**{print_key:_metrics[key] for print_key, key in _print_keys.items()})
+        logger.set_postfix(**{print_key:_metrics[key] for print_key, key in _print_keys.items()})
         if logger.iters % 100 == 0 and dist.get_rank() == 0:
             msg = " ".join(["{}:{:.2f}".format(print_key, _metrics[key]) for print_key, key in _print_keys.items()])
             print(f"iter: {logger.iters}\t"+msg)
@@ -304,7 +307,7 @@ def train(model, orig_model, opt, shd, scalar, ema, logger, metrics, data_proces
         if finished_training:
             dist.barrier()
             exit()
-    #logger.close_range()
+    logger.close_range()
     return {key: metrics.avg(key) for key in _metrics.keys()}
 
 def run(hps="teeny", port=29500, **kwargs):
